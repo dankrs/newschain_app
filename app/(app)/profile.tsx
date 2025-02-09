@@ -3,8 +3,10 @@ import { Text, Avatar, Button, TextInput, HelperText } from 'react-native-paper'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '@/constants';
 import { supabase } from '@/lib/supabase';
-import { useState, useEffect } from 'react';
-import { router } from 'expo-router';
+import { useState, useEffect, useCallback } from 'react';
+import { router, useNavigation } from 'expo-router';
+import { BackHandler } from 'react-native';
+import { showConfirmDialog } from '@/utils/dialogs';
 
 interface Profile {
   id: string;
@@ -19,6 +21,8 @@ export default function Profile() {
   const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const navigation = useNavigation();
 
   useEffect(() => {
     fetchProfile();
@@ -45,44 +49,125 @@ export default function Profile() {
     }
   };
 
+  const hasUnsavedChanges = useCallback(() => {
+    return isEditing && fullName !== profile?.full_name;
+  }, [isEditing, fullName, profile?.full_name]);
+
+  const handleBackNavigation = useCallback(async () => {
+    if (!hasUnsavedChanges()) {
+      return false;
+    }
+
+    const confirmed = await showConfirmDialog({
+      title: 'Discard Changes?',
+      message: 'You have unsaved changes. Are you sure you want to discard them?',
+      confirmText: 'Discard',
+      destructive: true,
+    });
+
+    if (confirmed) {
+      setIsEditing(false);
+      setFullName(profile?.full_name || '');
+      return false;
+    }
+
+    return true;
+  }, [hasUnsavedChanges, profile?.full_name]);
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      handleBackNavigation
+    );
+
+    return () => backHandler.remove();
+  }, [handleBackNavigation]);
+
+  useEffect(() => {
+    if (hasUnsavedChanges()) {
+      const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+        if (!e.data.action) return;
+
+        e.preventDefault();
+
+        handleBackNavigation().then((shouldPrevent) => {
+          if (!shouldPrevent) {
+            navigation.dispatch(e.data.action);
+          }
+        });
+      });
+
+      return unsubscribe;
+    }
+  }, [navigation, hasUnsavedChanges, handleBackNavigation]);
+
+  const handleCancelEditing = useCallback(async () => {
+    if (hasUnsavedChanges()) {
+      const confirmed = await showConfirmDialog({
+        title: 'Discard Changes?',
+        message: 'You have unsaved changes. Are you sure you want to discard them?',
+        confirmText: 'Discard',
+        destructive: true,
+      });
+
+      if (confirmed) {
+        setIsEditing(false);
+        setFullName(profile?.full_name || '');
+      }
+    } else {
+      setIsEditing(false);
+    }
+  }, [hasUnsavedChanges, profile?.full_name]);
+
+  const handleStartEditing = () => {
+    setIsEditing(true);
+  };
+
   const handleUpdateProfile = async () => {
     if (!profile) return;
-    
-    setIsLoading(true);
-    setError(null);
 
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: fullName,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', profile.id);
+    const confirmed = await showConfirmDialog({
+      title: 'Save Changes',
+      message: 'Are you sure you want to save these changes to your profile?',
+      confirmText: 'Save',
+    });
 
-      if (error) throw error;
+    if (confirmed) {
+      setIsLoading(true);
+      setError(null);
 
-      setProfile(prev => prev ? { ...prev, full_name: fullName } : null);
-      setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      setError('Failed to update profile');
-    } finally {
-      setIsLoading(false);
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            full_name: fullName,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', profile.id);
+
+        if (error) throw error;
+
+        setProfile(prev => prev ? { ...prev, full_name: fullName } : null);
+        setIsEditing(false);
+        Alert.alert('Success', 'Profile updated successfully');
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        setError('Failed to update profile');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await supabase.auth.signOut();
       router.replace('/(auth)/login');
     } catch (error) {
-      console.error('Error logging out:', error);
-      Alert.alert('Error', 'Failed to log out');
+      console.error('Error signing out:', error);
+      Alert.alert('Error', 'Failed to sign out');
     }
-  };
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -123,10 +208,7 @@ export default function Profile() {
                 </Button>
                 <Button
                   mode="outlined"
-                  onPress={() => {
-                    setIsEditing(false);
-                    setFullName(profile?.full_name || '');
-                  }}
+                  onPress={handleCancelEditing}
                   disabled={isLoading}
                   style={styles.button}
                 >
@@ -146,7 +228,7 @@ export default function Profile() {
               </View>
               <Button
                 mode="contained"
-                onPress={() => setIsEditing(true)}
+                onPress={handleStartEditing}
                 style={styles.button}
               >
                 Edit Profile
