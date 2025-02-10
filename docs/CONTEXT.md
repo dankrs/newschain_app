@@ -141,32 +141,54 @@ bookmarks (
 newschain/
 ├── app/                      # Expo Router app directory
 │   ├── (auth)/              # Authentication routes
-│   │   ├── login.tsx
-│   │   └── register.tsx
-│   ├── (main)/              # Main app routes
-│   │   ├── index.tsx        # Dashboard
-│   │   ├── topics/          # Topic management
-│   │   ├── articles/        # Article views
-│   │   └── bookmarks/       # Bookmarked articles
-│   └── _layout.tsx          # Root layout
+│   │   ├── _layout.tsx      # Auth layout configuration
+│   │   ├── login.tsx        # Login screen
+│   │   ├── register.tsx     # Registration screen
+│   │   ├── verify-email.tsx # Email verification screen
+│   │   └── welcome.tsx      # Welcome screen
+│   ├── (app)/               # Main app routes
+│   │   ├── _layout.tsx      # App layout with bottom tabs
+│   │   ├── home.tsx         # News feed screen
+│   │   ├── profile.tsx      # User profile screen
+│   │   └── topics.tsx       # Topic management screen
+│   ├── __tests__/           # Test files
+│   │   ├── index.test.tsx
+│   │   └── test.test.tsx
+│   ├── _layout.tsx          # Root layout configuration
+│   ├── index.tsx            # Entry redirect
+│   └── test.tsx             # Test screen
 ├── src/
 │   ├── components/          # Reusable components
 │   │   ├── ui/             # UI components
-│   │   └── features/       # Feature-specific components
-│   ├── hooks/              # Custom React hooks
-│   ├── services/           # API and external services
-│   │   ├── supabase.ts    # Supabase client
+│   │   │   └── Button.tsx  # Custom button component
+│   │   └── NewsCard.tsx    # News card component
+│   ├── constants/          # App constants
+│   │   └── index.ts        # Colors, fonts, sizes, strings
+│   ├── lib/               # Core libraries
+│   │   └── supabase.ts    # Supabase client configuration
+│   ├── services/          # API and external services
+│   │   ├── auth.ts        # Authentication service
 │   │   └── news.ts        # News service
-│   ├── utils/             # Utility functions
 │   ├── types/             # TypeScript types
-│   └── constants/         # App constants
-├── assets/                # Static assets
+│   │   ├── env.d.ts       # Environment variables types
+│   │   ├── news.ts        # News-related types
+│   │   └── topics.ts      # Topic-related types
+│   └── utils/             # Utility functions
+│       └── dialogs.ts     # Dialog helper functions
 ├── docs/                  # Documentation
-├── tests/                # Test files
-├── .env.example          # Environment variables template
-├── app.config.ts         # Expo config
-├── package.json
-└── tsconfig.json
+│   ├── CONTEXT.md         # App specification
+│   └── Development_Plan.md # Development roadmap
+├── assets/               # Static assets
+├── .env                  # Environment variables
+├── .env.example         # Environment template
+├── .gitignore           # Git ignore rules
+├── app.config.ts        # Expo config
+├── app.json             # Expo app manifest
+├── babel.config.js      # Babel configuration
+├── jest.setup.ts        # Jest test setup
+├── package.json         # Project dependencies
+├── README.md           # Project documentation
+└── tsconfig.json       # TypeScript configuration
 ```
 
 The database schema is designed for optimal performance with Supabase, including proper indexing and relationships. The folder structure follows Expo Router conventions while maintaining a clean separation of concerns.  
