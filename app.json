@@ -5,6 +5,7 @@
       "expo-router"
     ],
     "name": "newschain",
-    "slug": "newschain"
+    "slug": "newschain",
+    "newArchEnabled": true
   }
 }

@@ -1,3 +1,4 @@
+import React from 'react';
 import { StyleSheet, View, ScrollView, Alert } from 'react-native';
 import { Text, Avatar, Button, TextInput, HelperText } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -77,7 +78,10 @@ export default function Profile() {
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
-      handleBackNavigation
+      () => {
+        handleBackNavigation();
+        return true; // Prevent default behavior, we'll handle navigation ourselves
+      }
     );
 
     return () => backHandler.remove();
@@ -126,43 +130,38 @@ export default function Profile() {
   const handleUpdateProfile = async () => {
     if (!profile) return;
 
-    const confirmed = await showConfirmDialog({
-      title: 'Save Changes',
-      message: 'Are you sure you want to save these changes to your profile?',
-      confirmText: 'Save',
-    });
+    setIsLoading(true);
+    setError(null);
 
-    if (confirmed) {
-      setIsLoading(true);
-      setError(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
 
-      try {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            full_name: fullName,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', profile.id);
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: fullName,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
 
-        if (error) throw error;
+      if (error) throw error;
 
-        setProfile(prev => prev ? { ...prev, full_name: fullName } : null);
-        setIsEditing(false);
-        Alert.alert('Success', 'Profile updated successfully');
-      } catch (error) {
-        console.error('Error updating profile:', error);
-        setError('Failed to update profile');
-      } finally {
-        setIsLoading(false);
-      }
+      setProfile(prev => prev ? { ...prev, full_name: fullName } : null);
+      setIsEditing(false);
+      Alert.alert('Success', 'Profile updated successfully');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setError('Failed to update profile');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleLogout = useCallback(async () => {
     try {
       await supabase.auth.signOut();
-      router.replace('/(auth)/login');
+      router.replace('/(auth)');
     } catch (error) {
       console.error('Error signing out:', error);
       Alert.alert('Error', 'Failed to sign out');

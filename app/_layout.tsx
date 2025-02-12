@@ -35,7 +35,6 @@ export default function RootLayout() {
           headerShown: false,
         }}
       >
-        <Stack.Screen name="(auth)/welcome" options={{ title: 'Welcome' }} />
         <Stack.Screen
           name="(auth)"
           options={{
